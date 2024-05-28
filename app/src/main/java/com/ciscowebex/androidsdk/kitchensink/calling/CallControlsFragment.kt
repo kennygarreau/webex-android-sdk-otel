@@ -47,6 +47,7 @@ import com.ciscowebex.androidsdk.CompletionHandler
 import com.ciscowebex.androidsdk.WebexError
 import com.ciscowebex.androidsdk.annotation.renderer.LiveAnnotationRenderer
 import com.ciscowebex.androidsdk.kitchensink.BuildConfig
+import com.ciscowebex.androidsdk.kitchensink.KitchenSinkApp
 import com.ciscowebex.androidsdk.kitchensink.R
 import com.ciscowebex.androidsdk.kitchensink.WebexRepository
 import com.ciscowebex.androidsdk.kitchensink.WebexViewModel
@@ -103,6 +104,7 @@ import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
+import io.opentelemetry.context.
 
 class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface {
     private val TAG = "CallControlsFragment"
@@ -711,7 +713,11 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
 
     override fun onMediaQualityInfoChanged(mediaQualityInfo: Call.MediaQualityInfo) {
         Log.d(TAG, "CallObserver mediaQualityInfo changed : ${mediaQualityInfo.name}")
-        //Rum
+        var bssid = KitchenSinkApp.get().getWifiDetail('BSSID"')
+        var rssi = KitchenSinkApp.get().getWifiDetail("RSSI")
+        var linkSpeed = KitchenSinkApp.get().getWifiDetail("LinkSpeed")
+        var clientIP = KitchenSinkApp.get().getWifiDetail("IP")
+
         updateNetworkStatusChange(mediaQualityInfo)
     }
 

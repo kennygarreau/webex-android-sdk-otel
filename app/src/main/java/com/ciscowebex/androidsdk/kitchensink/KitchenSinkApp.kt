@@ -26,11 +26,11 @@ import com.splunk.rum.SplunkRum
 import com.splunk.rum.SplunkRumBuilder
 import com.splunk.rum.StandardAttributes
 import io.opentelemetry.api.common.Attributes
+import android.net.wifi.WifiInfo
+import android.net.wifi.WifiManager
 
 
 class KitchenSinkApp : Application(), LifecycleObserver {
-    private val realm = "us1"
-    private val rumAccessToken = "gGEQnwqEE5NtafAsqg-dkA"
 
     companion object {
         lateinit var instance: KitchenSinkApp
@@ -131,5 +131,21 @@ class KitchenSinkApp : Application(), LifecycleObserver {
     fun unloadKoinModules() {
         unloadKoinModules(listOf(mainAppModule, webexModule, loginModule, JWTWebexModule, AccessTokenWebexModule, OAuthWebexModule, searchModule, callModule, messagingModule, personModule, searchPeopleModule, webhooksModule, extrasModule, calendarMeetingsModule))
         isKoinModulesLoaded = false
+    }
+
+    // Helper Functions
+    fun getWifiDetail(reqParam: String): String? {
+        val wifiManager = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
+        val wifiInfo: WifiInfo? = wifiManager.connectionInfo
+        //return wifiInfo?.bssid
+        return when (reqParam) {
+            "BSSID" -> wifiInfo?.bssid
+            "RSSI" -> wifiInfo?.rssi?.toString()
+            "LinkSpeed" -> wifiInfo?.linkSpeed?.toString()
+            "IP" -> wifiInfo?.ipAddress?.toString() // deprecated API 31+
+            //"TXLinkSpeed" -> wifiInfo?.txLinkSpeedMbps?.toString() // API 29+
+            //"RXLinkSpeed" -> wifiInfo?.rxLinkSpeedMbps?.toString() // API 29+
+            else -> null
+        }
     }
 }
