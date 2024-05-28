@@ -31,6 +31,8 @@ import android.net.wifi.WifiManager
 
 
 class KitchenSinkApp : Application(), LifecycleObserver {
+    private val realm = "us1"
+    private val rumAccessToken = "<insertTokenHere>>"
 
     companion object {
         lateinit var instance: KitchenSinkApp
