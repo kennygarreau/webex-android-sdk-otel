@@ -711,6 +711,7 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
 
     override fun onMediaQualityInfoChanged(mediaQualityInfo: Call.MediaQualityInfo) {
         Log.d(TAG, "CallObserver mediaQualityInfo changed : ${mediaQualityInfo.name}")
+        //Rum
         updateNetworkStatusChange(mediaQualityInfo)
     }
 
@@ -3105,7 +3106,9 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
             Call.VideoRenderMode.StretchFill -> {
                 webexViewModel.scalingMode = Call.VideoRenderMode.Fit
             }
+            else -> Log.d(TAG, "hit else condition")
         }
+
 
         webexViewModel.setRemoteVideoRenderMode(call?.getCallId().orEmpty(), webexViewModel.scalingMode)
     }

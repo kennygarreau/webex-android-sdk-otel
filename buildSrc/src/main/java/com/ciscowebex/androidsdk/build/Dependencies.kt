@@ -1,13 +1,14 @@
 package com.ciscowebex.androidsdk.build
 
 object Versions {
-    const val kotlin = "1.6.20"
+    //const val kotlin = "1.6.20"
+    const val kotlin = "1.9.20"
     const val koin= "2.2.3"
 
     const val ndkVersion = "24.0.8215888"
     const val buildTools = "30.0.3"
 
-    const val compileSdk = 33
+    const val compileSdk = 34
     const val targetSdk = 29
     const val minSdk = 24
 

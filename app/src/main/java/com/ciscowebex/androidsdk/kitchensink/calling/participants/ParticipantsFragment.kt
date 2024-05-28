@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.databinding.DataBindingUtil
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.DialogFragment
 import androidx.lifecycle.Observer
 import androidx.recyclerview.widget.DividerItemDecoration
@@ -22,7 +23,7 @@ import com.ciscowebex.androidsdk.kitchensink.utils.showDialogWithMessage
 import com.ciscowebex.androidsdk.phone.MakeHostError
 import com.ciscowebex.androidsdk.phone.InviteParticipantError
 import com.ciscowebex.androidsdk.phone.CallMembership
-import kotlinx.android.synthetic.main.fragment_participants.*
+//import kotlinx.android.synthetic.main.fragment_participants.*
 
 
 class ParticipantsFragment : DialogFragment(), ParticipantsAdapter.OnItemActionListener {
@@ -105,7 +106,7 @@ class ParticipantsFragment : DialogFragment(), ParticipantsAdapter.OnItemActionL
 
         webexViewModel.muteAllLiveData.observe(this, Observer { shouldMuteAll ->
             if (shouldMuteAll != null) {
-                tvMute.text = if(shouldMuteAll) getString(R.string.mute_all) else getString(R.string.unmute_all)
+                binding.tvMute.text = if(shouldMuteAll) getString(R.string.mute_all) else getString(R.string.unmute_all)
             }
         })
 

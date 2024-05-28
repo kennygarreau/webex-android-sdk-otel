@@ -48,7 +48,13 @@ class TeamsFragment : Fragment() {
             )
             teamsClientAdapter = TeamsClientAdapter(optionsDialogFragment) { position ->
                 selectedTeamListItem = teamsClientAdapter.teams[position]
-                startActivityForResult(context?.let { MessagingSearchActivity.getIntent(it) }, requestCodeSearchPersonToAddToTeam)
+                context?.let { ctx ->
+                    val intent = MessagingSearchActivity.getIntent(ctx)
+                    startActivityForResult(intent, requestCodeSearchPersonToAddToTeam)
+                } ?: run {
+                    // Handle the null case here, for example, show a toast or log an error
+                    Log.d(TAG, "Context is null")
+                }
             }
 
             teamsRecyclerView.adapter = teamsClientAdapter

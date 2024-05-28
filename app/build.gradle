@@ -2,7 +2,8 @@ import com.ciscowebex.androidsdk.build.*
 
 apply plugin: 'com.android.application'
 apply plugin: 'kotlin-android'
-apply plugin: 'kotlin-android-extensions'
+//apply plugin: 'kotlin-android-extensions'
+apply plugin: 'kotlin-parcelize'
 apply plugin: 'kotlin-kapt'
 apply plugin: 'com.google.gms.google-services'  // Google Services plugin
 apply plugin: 'com.google.firebase.crashlytics' // Crashlytics Gradle plugin
@@ -16,17 +17,23 @@ def FEDRAMP_REDIRECT_URI='""'
 def WEBHOOK_URL='""'
 
 android {
-    compileSdkVersion Versions.compileSdk
+    compileSdk Versions.compileSdk
     buildToolsVersion Versions.buildTools
     ndkVersion Versions.ndkVersion
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled = true
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
-
+    viewBinding {
+        enabled = true
+    }
+    kapt {
+        correctErrorTypes true
+    }
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = JavaVersion.VERSION_17
     }
     defaultConfig {
         applicationId "com.cisco.sdk_android"
@@ -117,6 +124,7 @@ android {
             matchingFallbacks = ["wxc"]
         }
     }
+    namespace 'com.ciscowebex.androidsdk.kitchensink'
 }
 
 dependencies {
@@ -124,6 +132,9 @@ dependencies {
     implementation 'com.ciscowebex:webexsdk:3.11.2' // For full flavor
     //implementation 'com.ciscowebex:webexsdk-wxc:3.11.2' //For webexCalling flavor
     //implementation 'com.ciscowebex:webexsdk-meeting:3.11.2' // For meeting flavor
+    //implementation("io.opentelemetry.android:android-agent:0.6.0-alpha")
+    implementation("com.splunk:splunk-otel-android:1.4.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
     implementation fileTree(dir: "libs", include: ["*.jar"])
     implementation Dependencies.kotlinStdLib
     implementation Dependencies.coreKtx

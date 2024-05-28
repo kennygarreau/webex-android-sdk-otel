@@ -18,13 +18,16 @@ import com.ciscowebex.androidsdk.kitchensink.databinding.FragmentCommonBinding
 import com.ciscowebex.androidsdk.kitchensink.databinding.ListItemPersonsBinding
 import com.ciscowebex.androidsdk.kitchensink.person.PersonModel
 import com.ciscowebex.androidsdk.kitchensink.utils.Constants
-import kotlinx.android.synthetic.main.fragment_common.*
+//import kotlinx.android.synthetic.main.fragment_common.*
 import org.koin.android.ext.android.inject
 
 class SearchPeopleFragment : Fragment() {
     private val searchPeopleViewModel: SearchPeopleViewModel by inject()
     lateinit var personAdapter: SearchPersonAdapter
     var listItemSize: Int = 0
+
+    private var _binding: FragmentCommonBinding? = null
+    private val binding get() = _binding!!
 
     companion object {
         val TAG = SearchPeopleFragment::class.java.simpleName
@@ -52,7 +55,8 @@ class SearchPeopleFragment : Fragment() {
                 }
 
                 override fun onQueryTextChange(newText: String?): Boolean {
-                    progressBar.visibility = View.VISIBLE
+                    //progressBar.visibility = View.VISIBLE
+                    binding.progressBar.visibility = View.VISIBLE
                     searchPeopleViewModel.loadData(newText, listItemSize)
                     return false
                 }
@@ -60,7 +64,8 @@ class SearchPeopleFragment : Fragment() {
             })
 
             setUpViewModelObservers()
-
+            searchPeopleViewModel.loadData("", listItemSize)
+            binding.progressBar.visibility = View.VISIBLE
         }.root
 
     }
@@ -74,8 +79,36 @@ class SearchPeopleFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+
+        personAdapter = SearchPersonAdapter { selectedPerson ->
+            finishActivityAndReturnValue(selectedPerson)
+        }
+        binding.recyclerView.apply {
+            itemAnimator = DefaultItemAnimator()
+            adapter = personAdapter
+        }
+        listItemSize = resources.getInteger(R.integer.space_list_size)
+
+        binding.searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String?): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String?): Boolean {
+                binding.progressBar.visibility = View.VISIBLE
+                searchPeopleViewModel.loadData(newText, listItemSize)
+                return false
+            }
+        })
+
+        setUpViewModelObservers()
         searchPeopleViewModel.loadData("", listItemSize)
-        progress_bar.visibility = View.VISIBLE
+        binding.progressBar.visibility = View.VISIBLE
+    }
+
+    override fun onDestroyView() {
+        super.onDestroyView()
+        _binding = null
     }
 
 
@@ -118,13 +151,13 @@ class SearchPeopleFragment : Fragment() {
     }
 
     private fun updateEmptyListUI(listEmpty: Boolean) {
-        progress_bar.visibility = View.GONE
+        binding.progressBar.visibility = View.GONE
         if (listEmpty) {
-            tv_empty_data.visibility = View.VISIBLE
-            recycler_view.visibility = View.GONE
+            binding.tvEmptyData.visibility = View.VISIBLE
+            binding.recyclerView.visibility = View.GONE
         } else {
-            tv_empty_data.visibility = View.GONE
-            recycler_view.visibility = View.VISIBLE
+            binding.tvEmptyData.visibility = View.GONE
+            binding.recyclerView.visibility = View.VISIBLE
         }
     }
 

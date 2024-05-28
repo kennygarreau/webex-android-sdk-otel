@@ -8,8 +8,8 @@ import androidx.lifecycle.OnLifecycleEvent
 import androidx.lifecycle.ProcessLifecycleOwner
 import com.ciscowebex.androidsdk.kitchensink.auth.LoginActivity
 import com.ciscowebex.androidsdk.kitchensink.auth.loginModule
-import com.ciscowebex.androidsdk.kitchensink.calling.callModule
 import com.ciscowebex.androidsdk.kitchensink.calling.calendarMeeting.calendarMeetingsModule
+import com.ciscowebex.androidsdk.kitchensink.calling.callModule
 import com.ciscowebex.androidsdk.kitchensink.extras.extrasModule
 import com.ciscowebex.androidsdk.kitchensink.messaging.messagingModule
 import com.ciscowebex.androidsdk.kitchensink.messaging.search.searchPeopleModule
@@ -22,9 +22,15 @@ import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.loadKoinModules
 import org.koin.core.context.startKoin
 import org.koin.core.context.unloadKoinModules
+import com.splunk.rum.SplunkRum
+import com.splunk.rum.SplunkRumBuilder
+import com.splunk.rum.StandardAttributes
+import io.opentelemetry.api.common.Attributes
 
 
 class KitchenSinkApp : Application(), LifecycleObserver {
+    private val realm = "us1"
+    private val rumAccessToken = "gGEQnwqEE5NtafAsqg-dkA"
 
     companion object {
         lateinit var instance: KitchenSinkApp
@@ -50,11 +56,29 @@ class KitchenSinkApp : Application(), LifecycleObserver {
 
     override fun onCreate() {
         super.onCreate()
+
+        SplunkRum.builder()
+            .setApplicationName("webex-sdk")
+            .setDeploymentEnvironment("test")
+            .setRealm(realm)
+            .setRumAccessToken(rumAccessToken)
+            .setGlobalAttributes(
+                    Attributes.builder() // Add the application version. Alternatively, you
+                        // can pass BuildConfig.VERSION_NAME as the value.
+                        .put(StandardAttributes.APP_VERSION, "3.11.2")
+                        .build()
+            )
+            // Turn off instrumentation of background processes
+            //.disableBackgroundTaskReporting
+            // Enables debug logging if needed
+            //.enableDebug()
+            .build(this);
+
         startKoin {
             androidLogger()
             androidContext(this@KitchenSinkApp)
         }
-        ProcessLifecycleOwner.get().getLifecycle().addObserver(this);
+        ProcessLifecycleOwner.get().lifecycle.addObserver(this);
     }
 
     override fun attachBaseContext(base: Context?) {

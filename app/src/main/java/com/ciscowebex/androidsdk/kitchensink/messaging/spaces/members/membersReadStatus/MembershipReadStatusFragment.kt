@@ -1,6 +1,7 @@
 package com.ciscowebex.androidsdk.kitchensink.messaging.spaces.members.membersReadStatus
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -62,6 +63,7 @@ class MembershipReadStatusFragment : Fragment() {
                                 WebexRepository.MembershipEvent.MessageSeen -> {
                                     getList()
                                 }
+                                else -> Log.d("membershipLiveData", "hit else condition")
 
                             }
                         }

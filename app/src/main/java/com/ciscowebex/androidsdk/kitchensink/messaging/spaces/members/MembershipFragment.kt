@@ -162,6 +162,7 @@ class MembershipFragment : Fragment() {
                                     }
                                     Log.d(tag, "MembershipEvent - Delete -> MembershipID : ${it.second?.id} , PersonID : ${it.second?.personId} ")
                                 }
+                                else->null;
                             }
                         }
                     })

@@ -66,8 +66,10 @@ class DialFragment : Fragment() {
                 intent.putExtra("switchToUcOrWebexCalling", switchToCucmOrWxcCallToggle)
                 activity?.setResult(Activity.RESULT_OK, intent)
                 activity?.finish()
-            }else{
-                startActivity(context?.let { ctx -> CallActivity.getOutgoingIntent(ctx, dialText, switchToCucmOrWxcCallToggle) })
+            }else {
+                context?.let { ctx ->
+                    startActivity(CallActivity.getOutgoingIntent(ctx, dialText, switchToCucmOrWxcCallToggle))
+                }
             }
         }
 

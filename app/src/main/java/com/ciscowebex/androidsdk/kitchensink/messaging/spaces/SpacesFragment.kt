@@ -54,7 +54,13 @@ class SpacesFragment : Fragment() {
 
             spacesClientAdapter = SpacesClientAdapter(optionsDialogFragment, requireActivity().supportFragmentManager) { listItem ->
                 selectedSpaceListItem = listItem
-                startActivityForResult(context?.let { MessagingSearchActivity.getIntent(it) }, requestCodeSearchPersonToAddToSpace)
+                context?.let { ctx ->
+                    val intent = MessagingSearchActivity.getIntent(ctx)
+                    startActivityForResult(intent, requestCodeSearchPersonToAddToSpace)
+                } ?: run {
+                    // Handle the null case here, for example, show a toast or log an error
+                    Log.e("YourTag", "Context is null")
+                }
             }
 
             setHasOptionsMenu(true)
