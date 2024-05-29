@@ -1,7 +1,7 @@
 # Cisco Webex Android SDK Example
 
-Using the [Webex Android SDK](https://github.com/webex/webex-android-sdk) - this instruments the code, with a few updates that were made:
-- enable core library desugaring by default
+Using the [Webex Android SDK](https://github.com/webex/webex-android-sdk) - this instruments the code using OpenTelemetry, with a few updates that were made:
+- enable core library desugaring by default within the SDK
 - bumped source/targetCompatibility and jvmTarget to VERSION_17
 - updated the code to use ViewBindings (required for otel)
 - probably a few other things I'll remember
