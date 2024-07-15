@@ -19,6 +19,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings.Global
 import android.util.Log
 import android.util.Pair
 import android.util.Rational
@@ -98,16 +99,28 @@ import com.ciscowebex.androidsdk.phone.closedCaptions.CaptionItem
 import com.ciscowebex.androidsdk.phone.closedCaptions.ClosedCaptionsInfo
 import org.koin.android.ext.android.inject
 import com.ciscowebex.androidsdk.utils.internal.MimeUtils
+//import com.splunk.rum.SplunkRum
+//import com.splunk.rum.SplunkRum.getInstance
 import kotlinx.coroutines.CoroutineScope
 import java.io.File
 import java.util.Date
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.androidx.viewmodel.ext.android.viewModel
-import io.opentelemetry.context.
+import io.opentelemetry.api.trace.Span
+import io.opentelemetry.api.trace.Tracer
+import io.opentelemetry.api.GlobalOpenTelemetry
+import io.opentelemetry.android.OpenTelemetryRum
+import io.opentelemetry.api.OpenTelemetry
+import io.opentelemetry.api.common.AttributeKey
+import io.opentelemetry.api.common.Attributes
+import io.opentelemetry.context.Scope
+import io.opentelemetry.api.metrics.Meter
+
 
 class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface {
     private val TAG = "CallControlsFragment"
+    private val otelTAG = "otel-sdk"
     val webexViewModel: WebexViewModel by viewModel()
     val captionsViewModel: ClosedCaptionsViewModel by viewModel()
     private lateinit var binding: FragmentCallControlsBinding
@@ -150,10 +163,19 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
     private var attemptingToJoinABreakoutSession = false
     private val mHandler = Handler(Looper.getMainLooper())
 
+    // we shouldn't need this for SplunkRum as it instantiates its own tracer using the RUM ID
+    private val tracer: Tracer by lazy {
+        GlobalOpenTelemetry.getTracer("Webex-SDK-Tracer")
+    }
+
+    private val meter: Meter by lazy {
+        GlobalOpenTelemetry.getMeter("Webex-SDK-Meter")
+    }
     interface OnCallActionListener {
         fun onEndAndAnswer(currentCallId: String, newCallId: String, handler: CompletionHandler<Boolean>)
     }
 
+    private var callStartTime: Long = 0
     enum class NetworkStatus {
         PoorUplink,
         PoorDownlink,
@@ -202,6 +224,11 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
+        // I don't believe we need to instrument here, it never shows a span in the UI
+        val span = tracer.spanBuilder("CallControls").startSpan()
+
+        Log.i(otelTAG, span.toString())
+
         return DataBindingUtil.inflate<FragmentCallControlsBinding>(LayoutInflater.from(context),
                 R.layout.fragment_call_controls, container, false).also { binding = it }.apply {
             Log.d(TAG, "CallControlsFragment onCreateView webexViewModel: $webexViewModel")
@@ -214,6 +241,7 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
 //        Toast.makeText(requireActivity().applicationContext, "isUSMEnabled ${webexViewModel.webex.phone.isUnifiedSpaceMeetingEnabled()}", Toast.LENGTH_LONG).show()
 
         }.root
+        span.end()
     }
 
     private fun initAudioManager() {
@@ -256,6 +284,11 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
 
     fun dialOutgoingCall(callerId: String, isModerator: Boolean = false, pin: String = "", captcha: String = "", captchaId: String = "", isCucmOrWxcCall: Boolean) {
         Log.d(TAG, "dialOutgoingCall")
+        //val span = SplunkRum.getTrac.spanBuilder("dialOutgoingCall").startSpan()
+        //val scope: Scope = span.makeCurrent()
+        val span = tracer.spanBuilder("dialOutgoingCall").startSpan()
+        Log.i(otelTAG, span.toString())
+        span?.addEvent("User dialing ${callerId}")
         this.callerId = callerId
         if(isCucmOrWxcCall) {
             webexViewModel.dialPhoneNumber(callerId, getMediaOption(isModerator, pin, captcha, captchaId))
@@ -263,6 +296,7 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
         else {
             webexViewModel.dial(callerId, getMediaOption(isModerator, pin, captcha, captchaId))
         }
+        span.end()
     }
 
     private fun checkLicenseAPIs() {
@@ -272,7 +306,6 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
         Log.d(TAG, "checkLicenseAPIs license URL $URL")
         webexViewModel.requestVideoCodecActivation(AlertDialog.Builder(activity))
     }
-
     override fun onConnected(call: Call?) {
         Log.d(TAG, "CallObserver onConnected callId: ${call?.getCallId()}, hasAnyoneJoined: ${webexViewModel.hasAnyoneJoined()}, " +
                 "correlationId: ${call?.getCorrelationId()}, "+
@@ -283,6 +316,23 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
                 "isSpaceMeeting: ${webexViewModel.isSpaceMeeting()}, "+
                 "isScheduledMeeting: ${webexViewModel.isScheduledMeeting()}")
 
+        callStartTime = System.currentTimeMillis()
+
+        val callConnectCounter = meter.counterBuilder("webex.calls.count")
+            .setDescription("Number of Calls Made")
+            .setUnit("calls")
+            .build()
+
+        callConnectCounter.add(1)
+        //val span = SplunkRum.getInstance().openTelemetry.getTracer().spanBuilder("callConnected-span")?.startSpan()
+        val span = tracer.spanBuilder("callConnected").startSpan()
+
+        val _callId = call?.getCallId().toString()
+        span?.setAttribute("webex.callid", _callId)
+        span?.addEvent("webex.callid: ${_callId}")
+        Log.i(otelTAG, span.toString())
+        Log.i(otelTAG, "webex.callid: ${_callId}")
+        //SplunkRum.getInstance().addRumEvent("Webex callID: ${_callId}")
         onCallConnected(call?.getCallId().orEmpty(), call?.isCUCMCall() ?: false, call?.isWebexCallingOrWebexForBroadworks() ?: false)
         webexViewModel.sendFeedback(call?.getCallId().orEmpty(), 5, "Testing Comments SDK-v3")
         webexViewModel.setShareMaxCaptureFPSSetting(30)
@@ -302,6 +352,7 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
         if (incomingCallBottomSheetFragment.isVisible) {
             incomingCallBottomSheetFragment.dismiss()
         }
+        span?.end()
     }
 
     override fun onStartRinging(call: Call?, ringerType: Call.RingerType) {
@@ -320,6 +371,15 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
 
     override fun onDisconnected(call: Call?, event: CallObserver.CallDisconnectedEvent?) {
         Log.d(TAG, "CallObserver onDisconnected : " + call?.getCallId())
+        var callEndTime = System.currentTimeMillis()
+        var callDuration = (callEndTime - callStartTime) / 1000
+        val callDurationCounter = meter.counterBuilder("webex.calls.duration")
+            .setDescription("Duration of Calls Made")
+            .setUnit("seconds")
+            .build()
+
+        callDurationCounter.add(callDuration)
+        Log.i(otelTAG, "incrementing the call duration by ${callDuration} seconds")
 
         var callFailed = false
         var callEnded = false
@@ -656,6 +716,9 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
     }
 
     override fun onCallMembershipChanged(call: Call?, event: CallObserver.CallMembershipChangedEvent?) {
+        //val inst = SplunkRum.getInstance().
+        val span = tracer.spanBuilder("callMembershipChanged").startSpan()
+
         Log.d(TAG, "CallObserver OnCallMembershipEvent")
 
         event?.let { membershipEvent ->
@@ -664,10 +727,14 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
             when (membershipEvent) {
                 is CallObserver.MembershipJoinedEvent -> {
                     Log.d(TAG, "CallObserver OnCallMembershipEvent MembershipJoinedEvent")
+                    span.addEvent("User joined: ${callMembership?.getDisplayName()}")
+                    // below is how to instrument a RUM event with SplunkRUM
+                    //getInstance().addRumEvent("User joined: ${callMembership?.getDisplayName()}", Attributes.empty())
                     audioEventChanged(callMembership, call)
                 }
                 is CallObserver.MembershipLeftEvent -> {
                     Log.d(TAG, "CallObserver OnCallMembershipEvent MembershipLeftEvent")
+                    span.addEvent("User left: ${callMembership?.getDisplayName()}")
                 }
                 is CallObserver.MembershipDeclinedEvent -> {
                     Log.d(TAG, "CallObserver OnCallMembershipEvent MembershipDeclinedEvent")
@@ -691,6 +758,7 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
                 else -> {}
             }
         }
+        span?.end()
     }
 
     override fun onScheduleChanged(call: Call?) {
@@ -712,13 +780,20 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
     }
 
     override fun onMediaQualityInfoChanged(mediaQualityInfo: Call.MediaQualityInfo) {
+
+        val span = tracer.spanBuilder("mediaQualityChange").startSpan()
         Log.d(TAG, "CallObserver mediaQualityInfo changed : ${mediaQualityInfo.name}")
-        var bssid = KitchenSinkApp.get().getWifiDetail('BSSID"')
+        var bssid = KitchenSinkApp.get().getWifiDetail("BSSID")
         var rssi = KitchenSinkApp.get().getWifiDetail("RSSI")
         var linkSpeed = KitchenSinkApp.get().getWifiDetail("LinkSpeed")
         var clientIP = KitchenSinkApp.get().getWifiDetail("IP")
+        // for now, don't expose a clientIP
+        span?.addEvent("BSSID: ${bssid}")
+        span?.addEvent("RSSI: ${rssi}")
+        span?.addEvent("LinkSpeed: ${linkSpeed}")
 
         updateNetworkStatusChange(mediaQualityInfo)
+        span.end()
     }
 
     override fun onBroadcastMessageReceivedFromHost(message: String) {
@@ -3137,10 +3212,24 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
     }
 
     private fun updateNetworkStatusChange(mediaQualityInfo: Call.MediaQualityInfo) {
+
+        val poorQualityCounter = meter.counterBuilder("webex.poorquality.count")
+            .setDescription("Number of Poor Quality Events")
+            .setUnit("count")
+            .build()
+
         when (mediaQualityInfo) {
             Call.MediaQualityInfo.NetworkLost -> {
+                Log.i("otel-sdk", "call drop observed")
+                val callDropCounter = meter.counterBuilder("webex.calldrop.count")
+                    .setDescription("Number of Call Drops")
+                    .setUnit("drops")
+                    .build()
+
                 binding.ivNetworkSignal.setImageResource(R.drawable.ic_no_network)
                 currentNetworkStatus = NetworkStatus.NoNetwork
+
+                callDropCounter.add(1)
             }
             Call.MediaQualityInfo.Good -> {
                 binding.ivNetworkSignal.setImageResource(R.drawable.ic_good_network)
@@ -3149,10 +3238,14 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
             Call.MediaQualityInfo.PoorUplink -> {
                 binding.ivNetworkSignal.setImageResource(R.drawable.ic_poor_network)
                 currentNetworkStatus = NetworkStatus.PoorUplink
+
+                poorQualityCounter.add(1)
             }
             Call.MediaQualityInfo.PoorDownlink -> {
                 binding.ivNetworkSignal.setImageResource(R.drawable.ic_poor_network)
                 currentNetworkStatus = NetworkStatus.PoorDownlink
+
+                poorQualityCounter.add(1)
             }
             Call.MediaQualityInfo.HighCpuUsage -> showDialogWithMessage(requireContext(), R.string.warning, getString(R.string.high_cpu_usage))
             Call.MediaQualityInfo.DeviceLimitation -> showDialogWithMessage(requireContext(), R.string.warning, getString(R.string.device_limitation))
