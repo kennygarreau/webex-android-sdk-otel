@@ -371,6 +371,9 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
 
     override fun onDisconnected(call: Call?, event: CallObserver.CallDisconnectedEvent?) {
         Log.d(TAG, "CallObserver onDisconnected : " + call?.getCallId())
+        val span = tracer.spanBuilder("callDisconnected").startSpan()
+        span.addEvent("Call ID: ${call?.getCallId()}")
+
         var callEndTime = System.currentTimeMillis()
         var callDuration = (callEndTime - callStartTime) / 1000
         val callDurationCounter = meter.counterBuilder("webex.calls.duration")
@@ -717,8 +720,6 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
 
     override fun onCallMembershipChanged(call: Call?, event: CallObserver.CallMembershipChangedEvent?) {
         //val inst = SplunkRum.getInstance().
-        val span = tracer.spanBuilder("callMembershipChanged").startSpan()
-
         Log.d(TAG, "CallObserver OnCallMembershipEvent")
 
         event?.let { membershipEvent ->
@@ -727,14 +728,18 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
             when (membershipEvent) {
                 is CallObserver.MembershipJoinedEvent -> {
                     Log.d(TAG, "CallObserver OnCallMembershipEvent MembershipJoinedEvent")
+                    val span = tracer.spanBuilder("callMembershipJoined").startSpan()
                     span.addEvent("User joined: ${callMembership?.getDisplayName()}")
                     // below is how to instrument a RUM event with SplunkRUM
                     //getInstance().addRumEvent("User joined: ${callMembership?.getDisplayName()}", Attributes.empty())
                     audioEventChanged(callMembership, call)
+                    span?.end()
                 }
                 is CallObserver.MembershipLeftEvent -> {
                     Log.d(TAG, "CallObserver OnCallMembershipEvent MembershipLeftEvent")
+                    val span = tracer.spanBuilder("callMembershipLeft").startSpan()
                     span.addEvent("User left: ${callMembership?.getDisplayName()}")
+                    span?.end()
                 }
                 is CallObserver.MembershipDeclinedEvent -> {
                     Log.d(TAG, "CallObserver OnCallMembershipEvent MembershipDeclinedEvent")
@@ -758,7 +763,6 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
                 else -> {}
             }
         }
-        span?.end()
     }
 
     override fun onScheduleChanged(call: Call?) {
@@ -793,7 +797,7 @@ class CallControlsFragment : Fragment(), OnClickListener, CallObserverInterface 
         span?.addEvent("LinkSpeed: ${linkSpeed}")
 
         updateNetworkStatusChange(mediaQualityInfo)
-        span.end()
+        span?.end()
     }
 
     override fun onBroadcastMessageReceivedFromHost(message: String) {
